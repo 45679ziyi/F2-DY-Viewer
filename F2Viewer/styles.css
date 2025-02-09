@@ -5,308 +5,245 @@
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    line-height: 1.6;
-    color: #333;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     background-color: #f5f5f5;
+    color: #333;
+    line-height: 1.6;
 }
 
 .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 2rem;
+    color: #1a1a1a;
+}
+
+.upload-area {
+    background-color: #fff;
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    margin-bottom: 2rem;
+    transition: all 0.3s ease;
+}
+
+.upload-area.dragover {
+    border-color: #1da1f2;
+    background-color: rgba(29, 161, 242, 0.05);
+}
+
+.upload-content {
     display: flex;
     flex-direction: column;
-    height: 100vh;
-}
-
-header {
-    background-color: #fff;
-    padding: 1rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    display: flex;
-    justify-content: space-between;
     align-items: center;
-}
-
-.nav-buttons {
-    display: flex;
     gap: 1rem;
 }
 
-.nav-button {
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: 4px;
-    background-color: #f0f0f0;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.nav-button.active {
-    background-color: #1890ff;
-    color: white;
-}
-
-.folder-select-btn {
-    padding: 0.5rem 1rem;
-    border: 1px solid #1890ff;
-    border-radius: 4px;
-    background-color: white;
-    color: #1890ff;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.folder-select-btn:hover {
-    background-color: #1890ff;
-    color: white;
-}
-
-main {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-}
-
-.sidebar {
-    width: 250px;
-    background-color: white;
-    padding: 1rem;
-    border-right: 1px solid #e8e8e8;
-    overflow-y: auto;
-}
-
-.sidebar h2 {
+#uploadIcon {
+    width: 64px;
+    height: 64px;
     margin-bottom: 1rem;
-    font-size: 1.2rem;
-    color: #333;
 }
 
-.account-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.account-item {
-    padding: 0.5rem;
+button {
+    background-color: #1da1f2;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
     border-radius: 4px;
     cursor: pointer;
+    font-size: 1rem;
     transition: background-color 0.3s ease;
 }
 
-.account-item:hover {
-    background-color: #f0f0f0;
+button:hover {
+    background-color: #1991db;
 }
 
-.account-item.active {
-    background-color: #e6f7ff;
-    color: #1890ff;
+.secondary-btn {
+    background-color: #e1e8ed;
+    color: #1da1f2;
 }
 
-.content {
+.secondary-btn:hover {
+    background-color: #d4dce2;
+}
+
+.preview-area {
+    background-color: #fff;
+    border-radius: 8px;
+    padding: 2rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: none;
+}
+
+.preview-area.active {
+    display: flex;
+    gap: 2rem;
+}
+
+.sidebar {
+    flex: 0 0 250px;
+    border-right: 1px solid #eee;
+    padding-right: 1rem;
+}
+
+.main-content {
     flex: 1;
-    padding: 1rem;
-    overflow-y: auto;
+    min-width: 0;
 }
 
-.timeline {
-    max-width: 800px;
-    margin: 0 auto;
+.user-list {
     display: flex;
     flex-direction: column;
     gap: 1rem;
 }
 
-.post {
-    background-color: white;
-    border-radius: 8px;
-    padding: 1rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.post-header {
-    margin-bottom: 1rem;
-}
-
-.post-time {
-    color: #666;
-    font-size: 0.9rem;
-}
-
-.post-title {
-    margin-top: 0.5rem;
-    font-size: 1.1rem;
-    font-weight: 500;
-}
-
-.post-content {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+.user-item {
+    display: flex;
+    align-items: center;
     gap: 1rem;
+    padding: 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.user-item:hover {
+    background-color: #f5f8fa;
+}
+
+.user-item.active {
+    background-color: #e8f5fe;
+}
+
+.user-item img {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+}
+
+.user-item-info h3 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.user-item-info p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.controls {
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.weibo-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.weibo-item {
+    padding: 1rem;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    background-color: #fff;
+}
+
+.weibo-content {
+    margin-bottom: 1rem;
+    white-space: pre-wrap;
+}
+
+.weibo-media {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 0.5rem;
     margin-top: 1rem;
 }
 
-.media-item {
+.weibo-media img, .weibo-media video {
     width: 100%;
+    height: auto;
     border-radius: 4px;
-    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s ease;
 }
 
-.media-item img, 
-.media-item video {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
+.weibo-media img:hover, .weibo-media video:hover {
+    transform: scale(1.02);
 }
 
-/* 媒体查看器样式 */
-.media-viewer-overlay {
+.weibo-info {
+    display: flex;
+    gap: 1rem;
+    color: #666;
+    font-size: 0.9rem;
+    margin-top: 1rem;
+}
+
+.loading {
+    text-align: center;
+    padding: 1rem;
+    display: none;
+}
+
+.loading.active {
+    display: block;
+}
+
+.loading-text {
+    color: #666;
+}
+
+.modal {
+    display: none;
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
     background-color: rgba(0, 0, 0, 0.9);
-    display: flex;
-    justify-content: center;
-    align-items: center;
     z-index: 1000;
 }
 
-.media-viewer-content {
+.modal.active {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
     position: relative;
     max-width: 90%;
     max-height: 90%;
 }
 
-.media-viewer-content img,
-.media-viewer-content video {
+.media-container img, .media-container video {
     max-width: 100%;
     max-height: 90vh;
     object-fit: contain;
 }
 
-.media-viewer-close {
+.close-btn {
     position: absolute;
     top: -40px;
     right: 0;
-    background: none;
-    border: none;
-    color: white;
-    font-size: 24px;
+    color: #fff;
+    font-size: 2rem;
     cursor: pointer;
-    padding: 8px;
+    transition: color 0.2s ease;
 }
 
-.media-viewer-close:hover {
-    opacity: 0.8;
-}
-
-.media-item {
-    cursor: pointer;
-}
-
-/* 暗色主题样式 */
-body.dark-mode {
-    background-color: #1a1a1a;
-    color: #e0e0e0;
-}
-
-body.dark-mode header {
-    background-color: #2d2d2d;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-body.dark-mode .nav-button {
-    background-color: #3d3d3d;
-    color: #e0e0e0;
-}
-
-body.dark-mode .nav-button.active {
-    background-color: #1890ff;
-    color: white;
-}
-
-body.dark-mode .folder-select-btn {
-    border-color: #1890ff;
-    background-color: #2d2d2d;
-    color: #1890ff;
-}
-
-body.dark-mode .folder-select-btn:hover {
-    background-color: #1890ff;
-    color: white;
-}
-
-body.dark-mode .sidebar {
-    background-color: #2d2d2d;
-    border-right-color: #404040;
-}
-
-body.dark-mode .sidebar h2 {
-    color: #e0e0e0;
-}
-
-body.dark-mode .account-item:hover {
-    background-color: #3d3d3d;
-}
-
-body.dark-mode .account-item.active {
-    background-color: #1890ff3d;
-    color: #1890ff;
-}
-
-body.dark-mode .post {
-    background-color: #2d2d2d;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-body.dark-mode .post-time {
-    color: #999;
-}
-
-/* 媒体查看器样式 */
-.media-viewer-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.9);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
-
-.media-viewer-content {
-    position: relative;
-    max-width: 90%;
-    max-height: 90%;
-}
-
-.media-viewer-content img,
-.media-viewer-content video {
-    max-width: 100%;
-    max-height: 90vh;
-    object-fit: contain;
-}
-
-.media-viewer-close {
-    position: absolute;
-    top: -40px;
-    right: 0;
-    background: none;
-    border: none;
-    color: white;
-    font-size: 24px;
-    cursor: pointer;
-    padding: 8px;
-}
-
-.media-viewer-close:hover {
-    opacity: 0.8;
-}
-
-.media-item {
-    cursor: pointer;
+.close-btn:hover {
+    color: #ccc;
 }
