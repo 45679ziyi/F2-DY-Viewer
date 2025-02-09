@@ -1,387 +1,466 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const oneButton = document.getElementById('oneButton');
-    const postButton = document.getElementById('postButton');
-    const likeButton = document.getElementById('likeButton');
-    const mixButton = document.getElementById('mixButton');
-    const folderSelector = document.getElementById('folderSelector');
-    const accountList = document.getElementById('accountList');
-    const timeline = document.getElementById('timeline');
-    const loadAllButton = document.createElement('button');
-    const themeToggleButton = document.createElement('button');
-    
-    loadAllButton.id = 'loadAllButton';
-    loadAllButton.className = 'nav-button';
-    loadAllButton.textContent = '加载全部';
-    themeToggleButton.id = 'themeToggleButton';
-    themeToggleButton.className = 'nav-button';
-    themeToggleButton.textContent = '切换主题';
-    
-    const navButtons = document.querySelector('.nav-buttons');
-    navButtons.appendChild(loadAllButton);
-    navButtons.appendChild(themeToggleButton);
+    const dropZone = document.getElementById('dropZone');
+    const selectFolderBtn = document.getElementById('selectFolder');
+    const previewArea = document.getElementById('previewArea');
 
-    let currentMode = 'one';
-    let currentFolder = '';
-    let currentAccount = '';
-    let currentPage = 1;
-    let isLoadingMore = false;
-    let loadAll = false;
-    const PAGE_SIZE = 50;
+    // 拖拽事件处理
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, preventDefaults, false);
+        document.body.addEventListener(eventName, preventDefaults, false);
+    });
 
-    // 主题切换
-    let isDarkMode = localStorage.getItem('darkMode') === 'true';
-    function toggleTheme() {
-        isDarkMode = !isDarkMode;
-        document.body.classList.toggle('dark-mode', isDarkMode);
-        localStorage.setItem('darkMode', isDarkMode);
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
     }
 
-    themeToggleButton.addEventListener('click', toggleTheme);
-    document.body.classList.toggle('dark-mode', isDarkMode);
-
-    // 加载全部内容
-    loadAllButton.addEventListener('click', () => {
-        loadAll = !loadAll;
-        loadAllButton.classList.toggle('active', loadAll);
-        if (currentAccount) {
-            currentPage = 1;
-            loadContent();
-        }
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, highlight, false);
     });
 
-    // 添加拖拽区域
-    document.body.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, unhighlight, false);
     });
 
-    document.body.addEventListener('drop', async (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        
+    function highlight() {
+        dropZone.classList.add('dragover');
+    }
+
+    function unhighlight() {
+        dropZone.classList.remove('dragover');
+    }
+
+    let selectedFolderPath = '';
+
+    // 处理文件夹拖放
+    dropZone.addEventListener('drop', async (e) => {
         const items = e.dataTransfer.items;
-        if (items && items.length > 0) {
-            const item = items[0];
+        for (let item of items) {
             if (item.kind === 'file') {
-                const handle = await item.getAsFileSystemHandle();
-                if (handle.kind === 'directory') {
-                    await handleFolderSelection(handle);
+                const entry = item.webkitGetAsEntry();
+                if (entry.isDirectory) {
+                    selectedFolderPath = entry.fullPath;
+                    await processDirectory(entry);
                 }
             }
         }
     });
 
-    // 切换模式（one/post/like/mix）
-    oneButton.addEventListener('click', () => {
-        currentMode = 'one';
-        oneButton.classList.add('active');
-        postButton.classList.remove('active');
-        likeButton.classList.remove('active');
-        mixButton.classList.remove('active');
-        loadAccounts();
-    });
-
-    postButton.addEventListener('click', () => {
-        currentMode = 'post';
-        postButton.classList.add('active');
-        oneButton.classList.remove('active');
-        likeButton.classList.remove('active');
-        mixButton.classList.remove('active');
-        loadAccounts();
-    });
-
-    likeButton.addEventListener('click', () => {
-        currentMode = 'like';
-        likeButton.classList.add('active');
-        oneButton.classList.remove('active');
-        postButton.classList.remove('active');
-        mixButton.classList.remove('active');
-        loadAccounts();
-    });
-
-    mixButton.addEventListener('click', () => {
-        currentMode = 'mix';
-        mixButton.classList.add('active');
-        oneButton.classList.remove('active');
-        postButton.classList.remove('active');
-        likeButton.classList.remove('active');
-        loadAccounts();
-    });
-
-    // 选择文件夹
-    folderSelector.addEventListener('click', async () => {
-        try {
-            const dirHandle = await window.showDirectoryPicker();
-            await handleFolderSelection(dirHandle);
-        } catch (err) {
-            console.error('Error selecting folder:', err);
-        }
-    });
-
-    // 处理文件夹选择
-    async function handleFolderSelection(dirHandle) {
-        try {
-            const douyinDirs = await findDouyinFolders(dirHandle);
-            if (douyinDirs.length === 0) {
-                alert('未找到douyin文件夹，请选择正确的目录');
-            } else if (douyinDirs.length > 1) {
-                alert('检测到多个douyin文件夹，请确保目录结构正确');
-            } else {
-                currentFolder = douyinDirs[0];
-                loadAccounts();
+    // 处理文件夹选择按钮
+    selectFolderBtn.addEventListener('click', () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.webkitdirectory = true;
+        input.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                selectedFolderPath = e.target.files[0].webkitRelativePath.split('/')[0];
+                handleFileSelect(e);
             }
-        } catch (err) {
-            console.error('Error handling folder selection:', err);
-        }
+        });
+        input.click();
+    });
+
+    async function handleFileSelect(e) {
+        const files = Array.from(e.target.files);
+        savedFiles = files; // 保存文件列表
+        await processFiles(files);
     }
 
-    // 递归查找douyin文件夹
-    async function findDouyinFolders(dirHandle, depth = 0, results = []) {
-        if (depth > 5) return results;
-        
-        if (dirHandle.name === 'douyin') {
-            results.push(dirHandle);
+    // 处理文件夹
+    async function processDirectory(dirEntry) {
+        const weiboFolders = [];
+        await findWeiboFolders(dirEntry, weiboFolders);
+
+        if (weiboFolders.length === 0) {
+            alert('未找到weibo文件夹，请确保上传的文件夹包含weibo文件夹！');
+            return;
         }
 
-        try {
-            for await (const entry of dirHandle.values()) {
-                if (entry.kind === 'directory') {
-                    await findDouyinFolders(entry, depth + 1, results);
-                }
+        if (weiboFolders.length > 1) {
+            const confirmMessage = `检测到${weiboFolders.length}个weibo文件夹，是否全部导入？\n${weiboFolders.map(folder => folder.fullPath).join('\n')}`;
+            if (!confirm(confirmMessage)) {
+                return;
             }
-        } catch (err) {
-            console.error('Error searching directory:', err);
         }
 
-        return results;
-    }
-
-    // 加载账号列表
-    async function loadAccounts() {
-        accountList.innerHTML = '';
-        if (!currentFolder) return;
-
-        try {
-            const targetDir = await getTargetDirectory();
-            if (!targetDir) return;
-
-            const accounts = new Set();
-
-            for await (const entry of targetDir.values()) {
-                if (entry.kind === 'directory') {
-                    accounts.add(entry.name);
-                }
-            }
-
-            accounts.forEach(account => {
-                const div = document.createElement('div');
-                div.className = 'account-item';
-                div.textContent = account;
-                div.addEventListener('click', () => {
-                    document.querySelectorAll('.account-item').forEach(item => {
-                        item.classList.remove('active');
-                    });
-                    div.classList.add('active');
-                    currentAccount = account;
-                    currentPage = 1;
-                    loadContent();
-                });
-                accountList.appendChild(div);
-            });
-        } catch (err) {
-            console.error('Error loading accounts:', err);
+        for (const folder of weiboFolders) {
+            const files = await readDirectory(folder);
+            await processFiles(files);
         }
     }
 
-    // 获取目标目录（one或post）
-    async function getTargetDirectory() {
-        try {
-            return await currentFolder.getDirectoryHandle(currentMode);
-        } catch (err) {
-            console.error(`Error accessing ${currentMode} directory:`, err);
-            return null;
-        }
-    }
-
-    // 检查是否需要加载更多
-    const content = document.querySelector('.content');
-    content.addEventListener('scroll', checkLoadMore);
-
-    function checkLoadMore() {
-        if (isLoadingMore) return;
-        
-        const scrollHeight = content.scrollHeight;
-        const scrollTop = content.scrollTop;
-        const clientHeight = content.clientHeight;
-    
-        if (scrollHeight - scrollTop - clientHeight < 100) {
-            loadContent(true);
-        }
-    }
-
-    window.addEventListener('scroll', checkLoadMore);
-
-    // 加载内容
-    async function loadContent(append = false) {
-        if (!currentFolder || !currentAccount || isLoadingMore) return;
-
-        try {
-            isLoadingMore = true;
-            const targetDir = await getTargetDirectory();
-            if (!targetDir) return;
-
-            const accountDir = await targetDir.getDirectoryHandle(currentAccount);
-            if (!append) {
-                timeline.innerHTML = '';
-            }
-
+    function readDirectory(dirEntry) {
+        return new Promise((resolve) => {
             const files = [];
-            for await (const entry of accountDir.values()) {
-                if (entry.kind === 'file') {
-                    const match = entry.name.match(/^(\d{4}-\d{2}-\d{2} \d{2}-\d{2}-\d{2})_(.+?)_(image|video|live).*\.(jpg|webp|mp4)$/);
-                    if (match) {
-                        files.push({
-                            name: entry.name,
-                            timestamp: match[1],
-                            title: match[2],
-                            type: match[3],
-                            entry: entry
-                        });
+            const reader = dirEntry.createReader();
+            function readEntries() {
+                reader.readEntries((entries) => {
+                    if (!entries.length) {
+                        resolve(files);
+                    } else {
+                        processEntries(entries);
+                        readEntries();
                     }
-                }
+                });
             }
 
-            // 按时间戳排序
-            files.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+            function processEntries(entries) {
+                entries.forEach(entry => {
+                    if (entry.isFile) {
+                        entry.file(file => files.push(file));
+                    }
+                });
+            }
 
-            // 分页处理
-            const startIndex = (currentPage - 1) * PAGE_SIZE;
-            const endIndex = loadAll ? files.length : currentPage * PAGE_SIZE;
-            const pageFiles = files.slice(startIndex, endIndex);
+            readEntries();
+        });
+    }
 
-            // 按时间戳分组
-            const groups = {};
-            pageFiles.forEach(file => {
-                if (!groups[file.timestamp]) {
-                    groups[file.timestamp] = {
-                        title: file.title,
-                        files: []
-                    };
+    // 递归查找weibo文件夹
+    async function findWeiboFolders(dirEntry, result) {
+        const reader = dirEntry.createReader();
+        const entries = await new Promise(resolve => {
+            const allEntries = [];
+            function readEntries() {
+                reader.readEntries(entries => {
+                    if (!entries.length) {
+                        resolve(allEntries);
+                    } else {
+                        allEntries.push(...entries);
+                        readEntries();
+                    }
+                });
+            }
+            readEntries();
+        });
+
+        for (const entry of entries) {
+            if (entry.isDirectory) {
+                if (entry.name === 'weibo') {
+                    result.push(entry);
+                } else {
+                    await findWeiboFolders(entry, result);
                 }
-                groups[file.timestamp].files.push(file);
+            }
+        }
+    }
+
+    // 处理文件
+    let currentUser = null;
+let currentPage = 0;
+let isLoading = false;
+let allWeiboData = [];
+let isLazyLoadEnabled = true;
+let totalFiles = 0;
+let processedFiles = 0;
+let batchSize = 5; // 每批处理的文件数量
+let savedFiles = []; // 保存文件列表的全局变量
+
+async function processFiles(files) {
+    const userFiles = files.filter(file => file.name === 'users.csv');
+    const weiboFiles = files.filter(file => file.name.endsWith('.csv') && file.name !== 'users.csv');
+
+    // 计算总文件大小
+    const totalSize = files.reduce((acc, file) => acc + file.size, 0);
+    const sizeInGB = totalSize / (1024 * 1024 * 1024);
+    
+    if (sizeInGB > 1) { // 如果文件夹大于1GB，显示警告
+        if (!confirm(`文件夹大小为 ${sizeInGB.toFixed(2)}GB，加载大量数据可能会影响性能，是否继续？`)) {
+            return;
+        }
+    }
+
+    totalFiles = weiboFiles.length;
+    processedFiles = 0;
+    updateLoadingStatus();
+
+    if (userFiles.length > 0) {
+        const userData = await readCSVFile(userFiles[0]);
+        if (userData.length > 0) {
+            currentUser = userData[0];
+        }
+        displayUserList(userData);
+    }
+
+    if (weiboFiles.length > 0) {
+        // 分批处理文件
+        for (let i = 0; i < weiboFiles.length; i += batchSize) {
+            const batch = weiboFiles.slice(i, i + batchSize);
+            await processBatch(batch);
+        }
+        loadMoreWeibos();
+    }
+
+    previewArea.classList.add('active');
+    setupEventListeners();
+}
+
+async function processBatch(files) {
+    for (const file of files) {
+        const weiboData = await readCSVFile(file);
+        allWeiboData = allWeiboData.concat(weiboData);
+        processedFiles++;
+        updateLoadingStatus();
+    }
+}
+
+function updateLoadingStatus() {
+    const loading = document.getElementById('loading');
+    if (totalFiles > 0) {
+        const progress = Math.round((processedFiles / totalFiles) * 100);
+        loading.innerHTML = `<span class="loading-text">正在加载文件... ${progress}% (${processedFiles}/${totalFiles})</span>`;
+    }
+}
+
+    // 读取CSV文件
+    function readCSVFile(file) {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const text = e.target.result;
+                const lines = text.split('\n');
+                const headers = lines[0].split(',');
+                const data = [];
+
+                for (let i = 1; i < lines.length; i++) {
+                    if (!lines[i].trim()) continue;
+                    const values = lines[i].split(',');
+                    const entry = {};
+                    headers.forEach((header, index) => {
+                        entry[header.trim()] = values[index]?.trim() || '';
+                    });
+                    data.push(entry);
+                }
+
+                resolve(data);
+            };
+            reader.readAsText(file);
+        });
+    }
+
+    // 显示用户列表
+    function displayUserList(userData) {
+        const userList = document.getElementById('userList');
+        userList.innerHTML = '';
+
+        userData.forEach((user, index) => {
+            const userItem = document.createElement('div');
+            userItem.className = 'user-item';
+            userItem.innerHTML = `
+                <div class="user-item-info">
+                    <h3>${user.昵称 || ''}</h3>
+                    <p>粉丝：${user.粉丝数 || '0'}</p>
+                </div>
+            `;
+
+            userItem.addEventListener('click', async () => {
+                document.querySelectorAll('.user-item').forEach(item => item.classList.remove('active'));
+                userItem.classList.add('active');
+                currentUser = user;
+                // 使用昵称作为文件夹名称
+                if (!currentUser?.昵称) {
+                    console.error('用户昵称未定义');
+                    alert('无法加载用户数据：用户昵称未定义');
+                    return;
+                }
+                currentPage = 0;
+                allWeiboData = [];
+                document.getElementById('weiboContainer').innerHTML = '';
+                // 使用保存的文件列表
+                const userNickname = currentUser.昵称;
+                const weiboFiles = savedFiles.filter(file => {
+                    return file.name.endsWith('.csv') && 
+                           file.name !== 'users.csv' && 
+                           file.webkitRelativePath.includes(`weibo/${userNickname}/`);
+                });
+                if (weiboFiles.length === 0) {
+                    console.error('未找到该用户的微博数据文件');
+                    alert('未找到该用户的微博数据文件');
+                    return;
+                }
+                const loading = document.getElementById('loading');
+                loading.innerHTML = '<span class="loading-text">正在加载用户数据...</span>';
+                loading.classList.add('active');
+                try {
+                    for (const file of weiboFiles) {
+                        const weiboData = await readCSVFile(file);
+                        allWeiboData = allWeiboData.concat(weiboData);
+                    }
+                    loadMoreWeibos();
+                } catch (error) {
+                    console.error('加载用户数据时出错:', error);
+                    alert('加载用户数据时出错');
+                } finally {
+                    loading.classList.remove('active');
+                }
             });
 
-            // 创建帖子
-            for (const timestamp in groups) {
-                const group = groups[timestamp];
-                const post = document.createElement('div');
-                post.className = 'post';
+            userList.appendChild(userItem);
 
-                const header = document.createElement('div');
-                header.className = 'post-header';
+            // 自动选择第一个用户
+            if (index === 0) {
+                userItem.classList.add('active');
+                currentUser = user;
+                userItem.click(); // 触发点击事件来加载第一个用户的数据
+            }
+        });
+    }
 
-                const time = document.createElement('div');
-                time.className = 'post-time';
-                time.textContent = timestamp;
-
-                const title = document.createElement('div');
-                title.className = 'post-title';
-                title.textContent = group.title;
-
-                const content = document.createElement('div');
-                content.className = 'post-content';
-
-                header.appendChild(time);
-                header.appendChild(title);
-                post.appendChild(header);
-                post.appendChild(content);
-
-                // 创建媒体查看器
-                function createMediaViewer(mediaElement) {
-                    const overlay = document.createElement('div');
-                    overlay.className = 'media-viewer-overlay';
-                    
-                    const content = document.createElement('div');
-                    content.className = 'media-viewer-content';
-                    
-                    const closeButton = document.createElement('button');
-                    closeButton.className = 'media-viewer-close';
-                    closeButton.innerHTML = '×';
-                    closeButton.onclick = () => overlay.remove();
-                    
-                    const clonedMedia = mediaElement.cloneNode(true);
-                    if (clonedMedia.tagName === 'VIDEO') {
-                        clonedMedia.controls = true;
-                    }
-                    
-                    content.appendChild(clonedMedia);
-                    content.appendChild(closeButton);
-                    overlay.appendChild(content);
-                    document.body.appendChild(overlay);
-                    
-                    overlay.onclick = (e) => {
-                        if (e.target === overlay) {
-                            overlay.remove();
-                        }
-                    };
-                    
-                    // 添加ESC键盘事件监听
-                    const handleEscKey = (e) => {
-                        if (e.key === 'Escape') {
-                            overlay.remove();
-                            document.removeEventListener('keydown', handleEscKey);
-                        }
-                    };
-                    document.addEventListener('keydown', handleEscKey);
-                }
-
-                // 添加媒体文件
-                for (const file of group.files) {
-                    const mediaItem = document.createElement('div');
-                    mediaItem.className = 'media-item';
-
-                    if (file.type === 'image') {
-                        const img = document.createElement('img');
-                        file.entry.getFile().then(f => {
-                            img.src = URL.createObjectURL(f);
-                        });
-                        img.onclick = () => createMediaViewer(img);
-                        mediaItem.appendChild(img);
-                    } else if (file.type === 'video' || file.type === 'live') {
-                        const video = document.createElement('video');
-                        video.controls = true;
-                        video.preload = 'metadata';
-                        video.style.maxWidth = '100%';
-                        file.entry.getFile().then(f => {
-                            const url = URL.createObjectURL(f);
-                            video.src = url;
-                            video.onloadedmetadata = () => {
-                                if (video.videoWidth > video.videoHeight) {
-                                    video.style.width = '100%';
-                                    video.style.height = 'auto';
-                                } else {
-                                    video.style.width = 'auto';
-                                    video.style.height = '100%';
+    // 加载更多微博
+    function loadMoreWeibos() {
+        if (isLoading) return;
+        isLoading = true;
+    
+        const weiboContainer = document.getElementById('weiboContainer');
+        const loading = document.getElementById('loading');
+        loading.classList.add('active');
+    
+        const start = currentPage * 50;
+        const end = start + 50;
+        const weibos = allWeiboData.slice(start, end);
+    
+        weibos.forEach(weibo => {
+            if (!weibo.正文) return;
+    
+            const weiboItem = document.createElement('div');
+            weiboItem.className = 'weibo-item';
+    
+            const content = `
+                <div class="weibo-content">${weibo.正文}</div>
+                ${weibo.原始图片url ? `
+                    <div class="weibo-media">
+                        ${(() => {
+                            const date = weibo.完整日期.split(' ')[0].replace(/-/g, '');
+                            const id = weibo.id;
+                            const urls = weibo.原始图片url.split(',');
+                            return urls.map((url, index) => {
+                                const fileName = `${date}T_${id}_${index + 1}.jpg`;
+                                const userNickname = currentUser?.昵称;
+                                if (!userNickname) {
+                                    console.error('用户昵称未定义，无法加载图片');
+                                    return '';
                                 }
-                            };
-                        });
-                        video.onclick = () => createMediaViewer(video);
-                        mediaItem.appendChild(video);
-                    }
-
-                    content.appendChild(mediaItem);
+                                const localPath = `weibo/${userNickname}/img/原创微博图片/${fileName}`;
+                                return `<img data-src="${localPath}" alt="微博图片" class="lazy" onclick="showMedia('${localPath}', 'image')">`;
+                            }).join('');
+                        })()}
+                    </div>
+                ` : ''}
+                ${weibo.视频url ? `
+                    <div class="weibo-media">
+                        ${(() => {
+                            try {
+                                const date = weibo.完整日期.split(' ')[0].replace(/-/g, '');
+                                const id = weibo.id;
+                                const fileName = `${date}T_${id}_1.mp4`;
+                                if (!fileName) return '';
+                                const userNickname = currentUser?.昵称;
+                                if (!userNickname) {
+                                    console.error('用户昵称未定义，无法加载视频');
+                                    return '';
+                                }
+                                const localPath = `weibo/${userNickname}/video/原创微博视频/${fileName}`;
+                                return `<video data-src="${localPath}" class="lazy" controls onclick="showMedia('${localPath}', 'video')"></video>`;
+                            } catch (error) {
+                                console.error('处理视频URL时出错:', error);
+                                return '';
+                            }
+                        })()}
+                    </div>
+                ` : ''}
+    
+                <div class="weibo-info">
+                    <span>发布时间：${weibo.完整日期 || ''}</span>
+                    <span>点赞：${weibo.点赞数 || '0'}</span>
+                    <span>评论：${weibo.评论数 || '0'}</span>
+                    <span>转发：${weibo.转发数 || '0'}</span>
+                </div>
+            `;
+    
+            weiboItem.innerHTML = content;
+            weiboContainer.appendChild(weiboItem);
+        });
+    
+        // 初始化懒加载
+        const lazyImages = document.querySelectorAll('img.lazy, video.lazy');
+        const lazyLoadObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const media = entry.target;
+                    media.src = media.dataset.src;
+                    media.classList.remove('lazy');
+                    observer.unobserve(media);
                 }
+            });
+        });
+    
+        lazyImages.forEach(img => lazyLoadObserver.observe(img));
+    
+        currentPage++;
+        isLoading = false;
+        loading.classList.remove('active');
+    
+        if (end >= allWeiboData.length) {
+            window.removeEventListener('scroll', scrollHandler);
+        }
+    }
 
-                timeline.appendChild(post);
-            }
+    // 设置事件监听器
+    function setupEventListeners() {
+        // 滚动加载
+        window.addEventListener('scroll', scrollHandler);
 
-            if (pageFiles.length > 0) {
-                currentPage++;
+        // 加载全部按钮
+        document.getElementById('loadAllBtn').addEventListener('click', () => {
+            isLazyLoadEnabled = false;
+            window.removeEventListener('scroll', scrollHandler);
+            while (currentPage * 50 < allWeiboData.length) {
+                loadMoreWeibos();
             }
-        } catch (err) {
-            console.error('Error loading content:', err);
-        } finally {
-            isLoadingMore = false;
+        });
+
+        // 媒体预览
+        const modal = document.getElementById('mediaModal');
+        const closeBtn = document.getElementById('closeModal');
+        const mediaContainer = document.getElementById('mediaContainer');
+
+        window.showMedia = (url, type) => {
+            mediaContainer.innerHTML = type === 'image' 
+                ? `<img src="${url}" alt="微博图片">` 
+                : `<video src="${url}" controls autoplay></video>`;
+            modal.classList.add('active');
+        };
+
+        closeBtn.addEventListener('click', () => {
+            modal.classList.remove('active');
+            mediaContainer.innerHTML = '';
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                modal.classList.remove('active');
+                mediaContainer.innerHTML = '';
+            }
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('active');
+                mediaContainer.innerHTML = '';
+            }
+        });
+    }
+
+    // 滚动处理函数
+    function scrollHandler() {
+        if (!isLazyLoadEnabled || isLoading) return;
+
+        const scrollHeight = document.documentElement.scrollHeight;
+        const scrollTop = window.scrollY || document.documentElement.scrollTop;
+        const clientHeight = window.innerHeight || document.documentElement.clientHeight;
+
+        if (scrollHeight - scrollTop - clientHeight < 100) {
+            loadMoreWeibos();
         }
     }
 });
