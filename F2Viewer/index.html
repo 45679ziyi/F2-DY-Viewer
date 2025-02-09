@@ -1,32 +1,51 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>抖音内容查看器</title>
+    <title>微博文件夹查看器</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
-        <header>
-            <div class="nav-buttons">
-                <button id="oneButton" class="nav-button active">作品</button>
-                <button id="postButton" class="nav-button">内容</button>
-                <button id="likeButton" class="nav-button">喜欢</button>
-                <button id="mixButton" class="nav-button">合集</button>
+        <h1>微博文件夹查看器</h1>
+        <div class="upload-area" id="dropZone">
+            <div class="upload-content">
+                <img src="upload-icon.svg" alt="上传图标" id="uploadIcon">
+                <p>将文件夹拖放到此处，或</p>
+                <button id="selectFolder">选择文件夹</button>
             </div>
-            <button id="folderSelector" class="folder-select-btn">选择文件夹</button>
-        </header>
-        <main>
-            <aside class="sidebar">
-                <h2>账号列表</h2>
-                <div id="accountList" class="account-list"></div>
-            </aside>
-            <section class="content">
-                <div id="timeline" class="timeline"></div>
-            </section>
-        </main>
+        </div>
+        <div class="preview-area" id="previewArea">
+            <div class="sidebar">
+                <div class="user-list" id="userList">
+                    <!-- 用户列表将在这里动态加载 -->
+                </div>
+            </div>
+            <div class="main-content">
+                <div class="controls">
+                    <button id="loadAllBtn" class="secondary-btn">加载全部推文</button>
+                </div>
+                <div class="weibo-container" id="weiboContainer">
+                    <!-- 推文内容将在这里动态加载 -->
+                </div>
+                <div class="loading" id="loading">
+                    <span class="loading-text">加载中...</span>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <!-- 媒体预览模态框 -->
+    <div class="modal" id="mediaModal">
+        <div class="modal-content">
+            <span class="close-btn" id="closeModal">&times;</span>
+            <div class="media-container" id="mediaContainer">
+                <!-- 放大的媒体内容将在这里显示 -->
+            </div>
+        </div>
+    </div>
+
     <script src="app.js"></script>
 </body>
 </html>
